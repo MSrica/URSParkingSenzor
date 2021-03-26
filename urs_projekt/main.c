@@ -5,17 +5,32 @@ docs
 DISPLAY DATA
 displaying bars and not values
 keeping track of last known value(s) because of the big jumps(false readings)
-implementing button logic for increasing/decreasing buzzing distance
-
-OPTIONAL
-implementing LED lightS
 */
 
 // defining constants
 #define F_CPU 7372800UL
-#define triggerPin1 0
-#define triggerPin2 1
+
+#define displayPORT PORTD
+#define displayDDR DDRD
+#define diplayPin (1 << 4)
+#define buzzerPORT PORTC
+#define buzzerDDR DDRC
+#define buzzerPin (1 << 0)
+#define triggerPORT PORTA
+#define triggerDDR DDRA
+#define triggerPin1 (1 << 0)
+#define triggerPin2 (1 << 1)
+#define buttonPORT PORTB
+#define buttonDDR DDRB
+#define buttonPin1 (1 << 0)
+#define buttonPin2 (1 << 1)
+
+#define on 0x00
+#define off 0xff
+
 #define calculationConstant 431.85
+#define maximumDistance 25-1
+#define minimumDistance 5+1
 
 // including libraries
 #include <avr/io.h>
@@ -26,7 +41,7 @@ implementing LED lightS
 #include "lcd.h"
 
 // declaring global variables
-uint32_t timerOverflow ;
+uint32_t timerOverflow;
 uint32_t count1;
 uint32_t count2;
 uint16_t distance1;
@@ -69,17 +84,21 @@ void resetData(){
 	string2[0] = 0;
 }
 void initializeBuzzer(){
-	DDRC = 0xff;
-	PORTC = 0xff;
+	buzzerDDR = buzzerPin;
+	buzzerPORT = off;
 }
 void initializeDisplay(){
-	DDRD = _BV(4);
-	PORTD = 0xff;
+	displayDDR = diplayPin;
+	displayPORT = on;
 	lcd_init(LCD_DISP_ON);
 }
 void initializeTriggerPins(){
-	DDRA = _BV(0) | _BV(1);
-	PORTA = 0x00;
+	triggerDDR = triggerPin1 | triggerPin2;
+	triggerPORT = on;
+}
+void initializeButtons(){
+	buttonDDR = buttonPin1 | buttonPin2;
+	buttonPORT = off;
 }
 void initializeInterruptRegisters(){
 	TIMSK = (1 << TOIE1);
@@ -102,7 +121,7 @@ void reinitializeCounterValues(){
 void setDisplayRegisterValues(){
 	TCCR1A = _BV(COM1B1) | _BV(WGM10);
 	TCCR1B = _BV(WGM12) | _BV(CS11);
-	OCR1B = 16;
+	OCR1B = 96;
 }
 void printValues(){
 	lcd_clrscr();
@@ -114,28 +133,72 @@ void printValues(){
 	lcd_puts(string2);
 }
 void splashScreen(){
+	_delay_ms(200);
+	
 	setDisplayRegisterValues();
 	lcd_clrscr();
-	lcd_gotoxy(1,0);
-	lcd_puts("Parking senzor");
-	lcd_gotoxy(2,1);
+	lcd_gotoxy(2,0);
 	lcd_puts("URS projekt");
+	lcd_gotoxy(1,1);
+	lcd_puts("Parking senzor");
+	
 	_delay_ms(1500);
 }
 
-// buzzer
+// buzzer and buttons
+void setStartBuzzing(){
+	if(startBuzzing == 0) startBuzzing = 1;
+}
 void buzzing(){
 	if(startBuzzing == 1){
-		if((distance1 >= buzzingDistance) && (distance2 >= buzzingDistance)) PORTC = 0x01;
-		else PORTC = 0x00;
+		if((distance1 >= buzzingDistance) && (distance2 >= buzzingDistance)) buzzerPORT = 0x01;
+		else buzzerPORT = 0x00;
 	}
+}
+void addToBuzzingDistance(){
+	char buzzingString[16];
+	setDisplayRegisterValues();
+	lcd_clrscr();
+	
+	if(buzzingDistance <= maximumDistance){
+		buzzingDistance += 1;
+		itoa(buzzingDistance,buzzingString,10);
+		lcd_puts("Range increased");
+	}else{
+		strncpy(buzzingString, "Maximum distance", 16);
+	}
+	
+	lcd_gotoxy(7, 1);
+	lcd_puts(buzzingString);
+	_delay_ms(500);
+}
+void subtractFromBuzzingDistance(){
+	char buzzingString[16];
+	setDisplayRegisterValues();
+	lcd_clrscr();
+	
+	if(buzzingDistance >= minimumDistance){
+		buzzingDistance -= 1;
+		itoa(buzzingDistance,buzzingString,10);
+		lcd_puts("Range decreased");
+	}else{
+		strncpy(buzzingString, "Minimum distance", 16);
+	}
+	
+	lcd_gotoxy(7, 1);
+	lcd_puts(buzzingString);
+	_delay_ms(500);
+}
+void buttonPress(){
+	if(bit_is_clear(PINB, 0)) addToBuzzingDistance();
+	else if(bit_is_clear(PINB, 1)) subtractFromBuzzingDistance();
 }
 
 // sensor
 void shortPulse(uint8_t triggerPin){
-	PORTA |= (1 << triggerPin);
+	triggerPORT |= triggerPin;
 	_delay_us(10);
-	PORTA &= (~(1 << triggerPin));
+	triggerPORT &= (~triggerPin);
 }
 void risingEdge(){
 	TCCR1B = 0x41; // rising edge, no prescaler
@@ -156,9 +219,6 @@ void setSensorTurn(){
 	if(sensorTurn == 0) sensorTurn = 1;
 	else sensorTurn = 0;
 }
-void setStartBuzzing(){
-	if(startBuzzing == 0) startBuzzing = 1;
-}
 void calculateDistance(){
 	if(sensorTurn == 0){
 		count1 = ICR1 + (65535 * timerOverflow);
@@ -168,11 +228,13 @@ void calculateDistance(){
 
 void mainLoop(){
 	while(1){
+		buttonPress();
+		
 		if(sensorTurn == 0){
 			setSensorTurn();
 			reinitializeRegisters();
 			
-			shortPulse((uint8_t)triggerPin2);
+			shortPulse(triggerPin2);
 			_delay_ms(60);
 			
 			calculateDistance(sensorTurn);
@@ -182,27 +244,28 @@ void mainLoop(){
 			reinitializeRegisters();
 			reinitializeCounterValues();
 
-			shortPulse((uint8_t)triggerPin1);
+			shortPulse(triggerPin1);
 			risingEdge();
 			waitingForSignal();
 			fallingEdge();
 			waitingForSignal();
 			
 			calculateDistance(sensorTurn);
-			
-			setDisplayRegisterValues();
-			printValues();
-			
-			_delay_ms(500);
 		}
 		
+		setDisplayRegisterValues();
+		printValues();
+		
 		buzzing();
+		
+		_delay_ms(500);
 	}
 }
 
 int main(void){	
 	resetData();
 	initializeBuzzer();
+	initializeButtons();
 	initializeDisplay();
 	initializeTriggerPins();
 	initializeInterruptRegisters();
