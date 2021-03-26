@@ -1,5 +1,6 @@
 /* TODO
 IMPORTANT
+increase, decrease buzzing distace and logic for printin "O" values
 docs
 
 DISPLAY DATA
@@ -144,6 +145,46 @@ void splashScreen(){
 	
 	_delay_ms(1500);
 }
+void displayBlock(uint8_t x, uint8_t y) {
+	lcd_gotoxy(x, y);
+	lcd_puts("O");
+}
+void printOValues(){
+	lcd_clrscr();
+	
+	if(distance1 <= 15) {
+		for(uint8_t i = 0; i < 5; ++i)
+			displayBlock(i, 1);
+	}
+	if(distance1 <= 5) {
+		for(uint8_t i = 0; i< 5; ++i) {
+			displayBlock(i, 1);
+			displayBlock(i, 0);
+		}
+	}
+	
+	if(distance1 <= 15 && distance2 <= 15) {
+		for(uint8_t i = 5; i < 11; ++i)
+			displayBlock(i, 1);
+	}
+	if(distance1 <= 5 && distance2 <= 5) {
+		for(uint8_t i = 5; i< 11; ++i) {
+			displayBlock(i, 1);
+			displayBlock(i, 0);
+		}
+	}
+	
+	if(distance2 <= 15) {
+		for(uint8_t i = 11; i < 16; ++i)
+			displayBlock(i, 1);
+	}
+	if(distance2 <= 5) {
+		for(uint8_t i = 11; i < 16; ++i) {
+			displayBlock(i, 1);
+			displayBlock(i, 0);
+		}
+	}
+}
 
 // buzzer and buttons
 void setStartBuzzing(){
@@ -254,9 +295,11 @@ void mainLoop(){
 		}
 		
 		setDisplayRegisterValues();
+		
+		//printOValues();
 		printValues();
 		
-		buzzing();
+		//buzzing();
 		
 		_delay_ms(500);
 	}
