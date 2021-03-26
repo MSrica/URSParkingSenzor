@@ -1,15 +1,14 @@
 /* TODO
 IMPORTANT
-doesn't start recording the distance - screen on but no readings, reset needed
-
-KINDA IMPORTANT, HELPS
-figuring out every interrupt and explaining it in code/docs
+docs
 
 DISPLAY DATA
 displaying bars and not values
 keeping track of last known value(s) because of the big jumps(false readings)
-implementing LED lights somehow
 implementing button logic for increasing/decreasing buzzing distance
+
+OPTIONAL
+implementing LED lightS
 */
 
 // defining constants
@@ -35,6 +34,7 @@ uint16_t distance2;
 uint8_t interrupt0Turn;
 uint8_t sensorTurn;
 uint8_t buzzingDistance;
+uint8_t startBuzzing;
 char string1[16];
 char string2[16];
 
@@ -45,8 +45,8 @@ ISR(INT0_vect){
 		TCCR1B |= 1 << CS10;
 	}else{
 		interrupt0Turn = 0;
-		TCCR1B = 0;
 		count2 = TCNT1;
+		TCCR1B = 0;
 		TCNT1 = 0;
 	}
 }
@@ -63,7 +63,8 @@ void resetData(){
 	distance2 = 0;
 	interrupt0Turn = 0;
 	sensorTurn = 0;
-	buzzingDistance = 16;
+	buzzingDistance = 15;
+	startBuzzing = 0;
 	string1[0] = 0;
 	string2[0] = 0;
 }
@@ -73,7 +74,7 @@ void initializeBuzzer(){
 }
 void initializeDisplay(){
 	DDRD = _BV(4);
-	PORTD = 0xFF;
+	PORTD = 0xff;
 	lcd_init(LCD_DISP_ON);
 }
 void initializeTriggerPins(){
@@ -101,7 +102,7 @@ void reinitializeCounterValues(){
 void setDisplayRegisterValues(){
 	TCCR1A = _BV(COM1B1) | _BV(WGM10);
 	TCCR1B = _BV(WGM12) | _BV(CS11);
-	OCR1B = 64;
+	OCR1B = 16;
 }
 void printValues(){
 	lcd_clrscr();
@@ -112,11 +113,22 @@ void printValues(){
 	lcd_gotoxy(0, 1);
 	lcd_puts(string2);
 }
+void splashScreen(){
+	setDisplayRegisterValues();
+	lcd_clrscr();
+	lcd_gotoxy(1,0);
+	lcd_puts("Parking senzor");
+	lcd_gotoxy(2,1);
+	lcd_puts("URS projekt");
+	_delay_ms(1500);
+}
 
 // buzzer
 void buzzing(){
-	if((distance1 >= buzzingDistance) && (distance2 >= buzzingDistance)) PORTC = 0x01;
-	else PORTC = 0x00;
+	if(startBuzzing == 1){
+		if((distance1 >= buzzingDistance) && (distance2 >= buzzingDistance)) PORTC = 0x01;
+		else PORTC = 0x00;
+	}
 }
 
 // sensor
@@ -144,8 +156,11 @@ void setSensorTurn(){
 	if(sensorTurn == 0) sensorTurn = 1;
 	else sensorTurn = 0;
 }
+void setStartBuzzing(){
+	if(startBuzzing == 0) startBuzzing = 1;
+}
 void calculateDistance(){
-	if(sensorTurn == 1){
+	if(sensorTurn == 0){
 		count1 = ICR1 + (65535 * timerOverflow);
 		distance1 = (uint32_t)(count1 / calculationConstant);
 	}else distance2 = (uint32_t)(count2 / calculationConstant);
@@ -155,6 +170,15 @@ void mainLoop(){
 	while(1){
 		if(sensorTurn == 0){
 			setSensorTurn();
+			reinitializeRegisters();
+			
+			shortPulse((uint8_t)triggerPin2);
+			_delay_ms(60);
+			
+			calculateDistance(sensorTurn);
+		}else{
+			setSensorTurn();
+			setStartBuzzing();
 			reinitializeRegisters();
 			reinitializeCounterValues();
 
@@ -170,14 +194,6 @@ void mainLoop(){
 			printValues();
 			
 			_delay_ms(500);
-		}else{
-			setSensorTurn();
-			reinitializeRegisters();
-			
-			shortPulse((uint8_t)triggerPin2);
-			_delay_ms(60);
-			
-			calculateDistance(sensorTurn);
 		}
 		
 		buzzing();
@@ -190,6 +206,8 @@ int main(void){
 	initializeDisplay();
 	initializeTriggerPins();
 	initializeInterruptRegisters();
+	
+	splashScreen();
 	
 	mainLoop();
 }
