@@ -1,13 +1,3 @@
-/* TODO
-IMPORTANT
-increase, decrease buzzing distace and logic for printin "O" values
-docs
-
-DISPLAY DATA
-displaying bars and not values
-keeping track of last known value(s) because of the big jumps(false readings)
-*/
-
 // defining constants
 #define F_CPU 7372800UL
 
@@ -25,6 +15,7 @@ keeping track of last known value(s) because of the big jumps(false readings)
 #define buttonDDR DDRB
 #define buttonPin1 (1 << 0)
 #define buttonPin2 (1 << 1)
+#define buttonPin3 (1 << 2)
 
 #define on 0x00
 #define off 0xff
@@ -42,6 +33,7 @@ keeping track of last known value(s) because of the big jumps(false readings)
 #include "lcd.h"
 
 // declaring global variables
+uint8_t handbrake;
 uint32_t timerOverflow;
 uint32_t count1;
 uint32_t count2;
@@ -98,7 +90,7 @@ void initializeTriggerPins(){
 	triggerPORT = on;
 }
 void initializeButtons(){
-	buttonDDR = buttonPin1 | buttonPin2;
+	buttonDDR = buttonPin1 | buttonPin2 | buttonPin3;
 	buttonPORT = off;
 }
 void initializeInterruptRegisters(){
@@ -146,43 +138,86 @@ void splashScreen(){
 	_delay_ms(1500);
 }
 void displayBlock(uint8_t x, uint8_t y) {
-	lcd_gotoxy(x, y);
+	lcd_gotoxy(x + 5, y);
 	lcd_puts("O");
+}
+void displayBlock2(uint8_t x, uint8_t y) {
+	lcd_gotoxy(x + 5, y);
+	lcd_puts("/");
 }
 void printOValues(){
 	lcd_clrscr();
 	
-	if(distance1 <= 15) {
-		for(uint8_t i = 0; i < 5; ++i)
-			displayBlock(i, 1);
-	}
-	if(distance1 <= 5) {
-		for(uint8_t i = 0; i< 5; ++i) {
-			displayBlock(i, 1);
-			displayBlock(i, 0);
-		}
+	//left sensor 
+	lcd_gotoxy(0, 0);
+	lcd_puts("L: ");
+	if(distance1 >= buzzingDistance) {
+		for(uint8_t i = 0; i < 10; ++i) displayBlock(i, 0); // svi prazni 
+	} else if (distance1 <= 0.1 * buzzingDistance) {
+		for(uint8_t i = 0; i < 10; ++i) displayBlock2(i, 0); // svi puni 
+	} else if (distance1 <= 0.2 * buzzingDistance) {
+		for(uint8_t i = 0; i < 9; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 9; i < 10; i++) displayBlock(i, 0);
+	} else if (distance1 <= 0.3 * buzzingDistance) {
+		for(uint8_t i = 0; i < 8; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 8; i < 10; i++) displayBlock(i, 0);
+	} else if (distance1 <= 0.4 * buzzingDistance) {
+		for(uint8_t i = 0; i < 7; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 7; i < 10; i++) displayBlock(i, 0);
+	} else if (distance1 <= 0.5 * buzzingDistance) {
+		for(uint8_t i = 0; i < 6; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 6; i < 10; i++) displayBlock(i, 0);
+	} else if (distance1 <= 0.6 * buzzingDistance) {
+		for(uint8_t i = 0; i < 5; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 5; i < 10; i++) displayBlock(i, 0);
+	} else if (distance1 <= 0.7 * buzzingDistance) {
+		for(uint8_t i = 0; i < 4; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 4; i < 10; i++) displayBlock(i, 0);
+	} else if (distance1 <= 0.8 * buzzingDistance) {
+		for(uint8_t i = 0; i < 3; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 3; i < 10; i++) displayBlock(i, 0);
+	} else if (distance1 <= 0.9 * buzzingDistance) {
+		for(uint8_t i = 0; i < 2; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 2; i < 10; i++) displayBlock(i, 0);
+	} else if (distance1 <= buzzingDistance) {
+		for(uint8_t i = 0; i < 1; ++i) displayBlock2(i, 0);
+		for(uint8_t i = 1; i < 10; i++) displayBlock(i, 0);
 	}
 	
-	if(distance1 <= 15 && distance2 <= 15) {
-		for(uint8_t i = 5; i < 11; ++i)
-			displayBlock(i, 1);
-	}
-	if(distance1 <= 5 && distance2 <= 5) {
-		for(uint8_t i = 5; i< 11; ++i) {
-			displayBlock(i, 1);
-			displayBlock(i, 0);
-		}
-	}
-	
-	if(distance2 <= 15) {
-		for(uint8_t i = 11; i < 16; ++i)
-			displayBlock(i, 1);
-	}
-	if(distance2 <= 5) {
-		for(uint8_t i = 11; i < 16; ++i) {
-			displayBlock(i, 1);
-			displayBlock(i, 0);
-		}
+	//right sensor
+	lcd_gotoxy(0, 1);
+	lcd_puts("R: ");
+	if(distance2 >= buzzingDistance) {
+		for(uint8_t i = 0; i < 10; ++i) displayBlock(i, 1); // svi prazni
+	} else if (distance2 <= 0.1 * buzzingDistance) {
+		for(uint8_t i = 0; i < 10; ++i) displayBlock2(i, 1); // svi puni
+	} else if (distance2 <= 0.2 * buzzingDistance) {
+		for(uint8_t i = 0; i < 9; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 9; i < 10; i++) displayBlock(i, 1);
+	} else if (distance2 <= 0.3 * buzzingDistance) {
+		for(uint8_t i = 0; i < 8; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 8; i < 10; i++) displayBlock(i, 1);
+	} else if (distance2 <= 0.4 * buzzingDistance) {
+		for(uint8_t i = 0; i < 7; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 7; i < 10; i++) displayBlock(i, 1);
+	} else if (distance2 <= 0.5 * buzzingDistance) {
+		for(uint8_t i = 0; i < 6; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 6; i < 10; i++) displayBlock(i, 1);
+	} else if (distance2 <= 0.6 * buzzingDistance) {
+		for(uint8_t i = 0; i < 5; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 5; i < 10; i++) displayBlock(i, 1);
+	} else if (distance2 <= 0.7 * buzzingDistance) {
+		for(uint8_t i = 0; i < 4; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 4; i < 10; i++) displayBlock(i, 1);
+	} else if (distance2 <= 0.8 * buzzingDistance) {
+		for(uint8_t i = 0; i < 3; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 3; i < 10; i++) displayBlock(i, 1);
+	} else if (distance2 <= 0.9 * buzzingDistance) {
+		for(uint8_t i = 0; i < 2; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 2; i < 10; i++) displayBlock(i, 1);
+	} else if (distance2 <= buzzingDistance) {
+		for(uint8_t i = 0; i < 1; ++i) displayBlock2(i, 1);
+		for(uint8_t i = 1; i < 10; i++) displayBlock(i, 1);
 	}
 }
 
@@ -193,7 +228,19 @@ void setStartBuzzing(){
 void buzzing(){
 	if(startBuzzing == 1){
 		if((distance1 >= buzzingDistance) && (distance2 >= buzzingDistance)) buzzerPORT = 0x01;
-		else buzzerPORT = 0x00;
+		else {
+			if ((distance1 <= (0.2 * buzzingDistance)) || (distance2 <= (0.2 * buzzingDistance))) buzzerPORT = 0x00;
+			else {
+				for(int i = 0; i < 10; i++){
+					if(i % 2 == 0) buzzerPORT = 0x00;
+					else buzzerPORT =  0x01;
+				if ((distance1 <= (0.4 * buzzingDistance)) || (distance2 <= (0.4 * buzzingDistance))) _delay_ms(50);
+				else if ((distance1 <= (0.6 * buzzingDistance)) || (distance2 <= (0.6 * buzzingDistance))) _delay_ms(100);
+				else if ((distance1 <= (0.8 * buzzingDistance)) || (distance2 <= (0.8 * buzzingDistance))) _delay_ms(150);
+				else _delay_ms(200);
+			}
+			}
+		}
 	}
 }
 void addToBuzzingDistance(){
@@ -206,7 +253,8 @@ void addToBuzzingDistance(){
 		itoa(buzzingDistance,buzzingString,10);
 		lcd_puts("Range increased");
 	}else{
-		strncpy(buzzingString, "Maximum distance", 16);
+		lcd_puts("Maximum distance");
+		//strncpy(buzzingString, "Maximum distance", 16);
 	}
 	
 	lcd_gotoxy(7, 1);
@@ -223,16 +271,32 @@ void subtractFromBuzzingDistance(){
 		itoa(buzzingDistance,buzzingString,10);
 		lcd_puts("Range decreased");
 	}else{
-		strncpy(buzzingString, "Minimum distance", 16);
+		lcd_puts("Minimum distance");
+		//strncpy(buzzingString, "Minimum distance", 16);
 	}
 	
 	lcd_gotoxy(7, 1);
 	lcd_puts(buzzingString);
 	_delay_ms(500);
 }
+void handbrakepull() {
+	lcd_clrscr();
+	
+	if (handbrake == 0)	{
+		lcd_gotoxy(2,0);
+		lcd_puts("Handbrake up");
+	}
+	else {
+		lcd_gotoxy(1,0);
+		lcd_puts("Handbrake down");
+	}
+	handbrake = (handbrake + 1) % 2;
+	_delay_ms(500);
+}
 void buttonPress(){
 	if(bit_is_clear(PINB, 0)) addToBuzzingDistance();
 	else if(bit_is_clear(PINB, 1)) subtractFromBuzzingDistance();
+	else if(bit_is_clear(PINB, 2)) handbrakepull();
 }
 
 // sensor
@@ -296,10 +360,9 @@ void mainLoop(){
 		
 		setDisplayRegisterValues();
 		
-		//printOValues();
-		printValues();
-		
-		//buzzing();
+		printOValues();
+		//printValues();
+		if (handbrake == 0) buzzing();
 		
 		_delay_ms(500);
 	}
