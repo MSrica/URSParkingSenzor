@@ -1831,7 +1831,7 @@ void printValues(){
 00000c6e <buzzing>:
 }
 
-// buzzer and buttons
+// buzzing
 void buzzing(){
      c6e:	4f 92       	push	r4
      c70:	5f 92       	push	r5
@@ -2106,6 +2106,8 @@ void buzzing(){
      e8c:	08 95       	ret
 
 00000e8e <addToBuzzingDistance>:
+
+// buttons
 void addToBuzzingDistance(){
      e8e:	cf 93       	push	r28
      e90:	df 93       	push	r29
@@ -2389,7 +2391,7 @@ void shortPulse(uint8_t triggerPin){
 00001062 <risingEdge>:
 }
 void risingEdge(){
-	TCCR1B = 0x41; // rising edge, no prescaler
+	TCCR1B = (1 << ICES1) | (1 << CS10); // rising edge, no prescaling
     1062:	81 e4       	ldi	r24, 0x41	; 65
     1064:	8e bd       	out	0x2e, r24	; 46
 	TIFR = 1 << ICF1; //clear input capture flag
@@ -2403,7 +2405,7 @@ void fallingEdge(){
 	TCNT1 = 0; //timer/counter1 value
     106c:	1d bc       	out	0x2d, r1	; 45
     106e:	1c bc       	out	0x2c, r1	; 44
-	TCCR1B = 0x01; // falling edge, no prescaler
+	TCCR1B = 0x01; // falling edge, no prescaling
     1070:	81 e0       	ldi	r24, 0x01	; 1
     1072:	8e bd       	out	0x2e, r24	; 46
 	TIFR = 1 << ICF1; //clear input capture flag

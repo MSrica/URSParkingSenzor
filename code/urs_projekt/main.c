@@ -354,12 +354,12 @@ void shortPulse(uint8_t triggerPin){
 	triggerPORT &= (~triggerPin);
 }
 void risingEdge(){
-	TCCR1B = 0x41; // rising edge, no prescaler
+	TCCR1B = (1 << ICES1) | (1 << CS10); // rising edge, no prescaler
 	TIFR = 1 << ICF1; //clear input capture flag
 }
 void fallingEdge(){
 	TCNT1 = 0; //timer/counter1 value
-	TCCR1B = 0x01; // falling edge, no prescaler
+	TCCR1B = 1 << CS10; // falling edge, no prescaler
 	TIFR = 1 << ICF1; //clear input capture flag
 	timerOverflow = 0;
 }
