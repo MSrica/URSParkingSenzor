@@ -1,0 +1,31 @@
+PINOUT
+
+LCD
+1 - GND
+2 - VCC
+3 - PD4
+4 - PB5
+5 - PB6
+6 - PB7
+11 - PB0
+12 - PB1
+13 - PB2
+14 - GND
+17 - RESISTOR -> VCC
+
+BUZZER
+1 - VCC
+2 - PC0
+3 - GND
+
+1. HC-SR04
+1 - VCC
+2 - PA0
+3 - PD6
+4 - GND
+
+2. HC-SR04
+1 - VCC
+2 - PA1
+3 - PD2
+4 - GND
